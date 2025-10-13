@@ -1,161 +1,259 @@
-
 // src/components/CanvasTimeline.tsx
-// ------------------------------------------------------------
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Scene } from '@/lib/types';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { Scene, SlugLocation, SlugTimeOfDay } from "@/lib/types";
 
-export function CanvasTimeline({ scenes, onReorder }: { scenes: Scene[]; onReorder: (s: Scene[]) => void; }) {
+type Props = {
+  scenes: Scene[];
+  onReorder: (next: Scene[]) => void;
+};
+
+const BOX_W = 220;          // scene card width (CSS px)
+const BOX_H = 80;           // scene card height
+const GAP_X = 24;           // horizontal gap
+const PAD = 16;             // canvas padding
+
+export function CanvasTimeline({ scenes, onReorder }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [offsetX, setOffsetX] = useState(0);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [grabOffsetX, setGrabOffsetX] = useState(0); // cursor offset inside box
+  const [ghostX, setGhostX] = useState<number | null>(null); // transient x for the dragged box (CSS px)
 
-  const rowHeight = 64;
-  const padding = 24;
-  const boxWidth = 200;
-  const boxHeight = 48;
-  const gap = 16;
+  // Sorted by order to define the lane positions
+  const sorted = useMemo(() => scenes.slice().sort((a, b) => a.order - b.order), [scenes]);
 
-  const positioned = useMemo(() => {
-    return [...scenes]
-      .sort((a,b)=>a.order-b.order)
-      .map((s, i) => ({ s, x: padding + i * (boxWidth + gap), y: padding }));
-  }, [scenes]);
+  // Layout helpers (all in CSS pixels)
+  const colX = (idx: number) => PAD + idx * (BOX_W + GAP_X);
+  const idxFromX = (x: number) => {
+    const i = Math.round((x - PAD) / (BOX_W + GAP_X));
+    return clamp(i, 0, Math.max(0, sorted.length - 1));
+  };
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+  // Canvas sizing + DPR scale
   useEffect(() => {
-    const canvas = canvasRef.current; if (!canvas) { return; }
+    const canvas = canvasRef.current!;
+    const parent = canvas.parentElement!;
     const dpr = window.devicePixelRatio || 1;
-    const width = Math.max(positioned.length * (boxWidth + gap) + padding * 2, 600);
-    const height = rowHeight + padding * 2;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-    const ctx = canvas.getContext('2d'); if (!ctx) { return; }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    ctx.fillStyle = '#fafafa';
-    ctx.fillRect(0,0,width,height);
+    const resize = () => {
+      const rect = parent.getBoundingClientRect();
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `220px`; // fixed lane height
+      canvas.width = Math.max(rect.width, PAD * 2 + sorted.length * (BOX_W + GAP_X)) * dpr;
+      canvas.height = 220 * dpr;
+      const ctx = canvas.getContext("2d")!;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS px
+      draw(ctx);
+    };
 
-    ctx.strokeStyle = '#ddd';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(padding, padding + boxHeight + 8);
-    ctx.lineTo(width - padding, padding + boxHeight + 8);
-    ctx.stroke();
+    const draw = (ctx: CanvasRenderingContext2D) => {
+      // bg
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fafafa";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    positioned.forEach((p, i) => {
-      const isDragging = dragIdx === i;
-      const x = p.x + (isDragging ? offsetX : 0);
-      const y = p.y;
-
-      ctx.fillStyle = p.s.color;
-      ctx.strokeStyle = '#bbb';
-      roundRect(ctx, x, y, boxWidth, boxHeight, 12);
-      ctx.fill();
+      // timeline baseline
+      ctx.strokeStyle = "#e5e5e5";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, 140);
+      ctx.lineTo(canvas.width, 140);
       ctx.stroke();
 
-      ctx.fillStyle = '#111';
-      ctx.font = '14px system-ui, -apple-system, Segoe UI, Roboto';
-      ctx.textBaseline = 'middle';
-      const title = p.s.title || 'Untitled';
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x+12, y+8, boxWidth-24, boxHeight-16);
-      ctx.clip();
-      ctx.fillText(title, x+12, y + boxHeight/2);
-      ctx.restore();
+      // boxes
+      for (let i = 0; i < sorted.length; i++) {
+        const s = sorted[i];
+        const x = dragId === s.id && ghostX != null ? ghostX : colX(i);
+        const y = 80;
 
-      ctx.fillStyle = '#333';
-      ctx.beginPath();
-      ctx.arc(x + boxWidth - 14, y + 14, 10, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = 'white';
-      ctx.font = '12px system-ui';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(i+1), x + boxWidth - 14, y + 14);
-      ctx.textAlign = 'left';
-    });
-  }, [positioned, dragIdx, offsetX]);
+        // card
+        ctx.fillStyle = s.color || "hsl(200 70% 85%)";
+        ctx.strokeStyle = "rgba(0,0,0,0.1)";
+        roundRect(ctx, x, y, BOX_W, BOX_H, 12);
+        ctx.fill();
+        ctx.stroke();
 
-  const hit = (mx: number, my: number) => {
-    for (let i=0;i<positioned.length;i++){
-      const p = positioned[i];
-      const x = p.x + (dragIdx===i?offsetX:0);
-      if (mx>=x && mx<=x+boxWidth && my>=p.y && my<=p.y+boxHeight) return i;
+        // title
+        ctx.fillStyle = "#111827";
+        ctx.font = "600 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+        ctx.textBaseline = "top";
+        ctx.fillText(truncate(s.title || "Untitled", 32), x + 12, y + 10);
+
+        // meta row
+        ctx.fillStyle = "#6b7280";
+        ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+        const meta = `#${i + 1}${s.durationMin ? ` • ${s.durationMin}m` : ""}`;
+        ctx.fillText(meta, x + 12, y + BOX_H - 24);
+
+        // location icon badge
+        drawLocationBadge(ctx, x, y, s.loc ?? "INT");
+        // time of day icon badge
+        drawTimeOfDayBadge(ctx, x, y, s.tod ?? "DAY");
+      }
+    };
+
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, [sorted, dragId, ghostX]);
+
+  // Pointer hit test (CSS px)
+  const hitTest = (x: number, y: number) => {
+    for (let i = 0; i < sorted.length; i++) {
+      const s = sorted[i];
+      const bx = colX(i);
+      const by = 80;
+      if (x >= bx && x <= bx + BOX_W && y >= by && y <= by + BOX_H) return s.id;
     }
-    return -1;
+    return null;
   };
 
+  // Overlay events (so we don't fight the canvas)
   useEffect(() => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    let startX = 0;
+    const overlay = overlayRef.current!;
 
-    const onDown = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const idx = hit(mx, my);
-      if (idx>=0){ setDragIdx(idx); startX = mx; }
-    };
-    const onMove = (e: MouseEvent) => {
-      if (dragIdx===null) return;
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      setOffsetX(mx - startX);
-    };
-    const onUp = () => {
-      if (dragIdx===null) return;
-      const dx = offsetX;
-      const slots = positioned.map((_,i)=> i * (boxWidth + gap));
-      const from = dragIdx;
-      const fromX = slots[from];
-      const toX = Math.max(0, fromX + dx);
-      let to = 0; let best = Infinity;
-      slots.forEach((sx,i)=>{ const d = Math.abs(sx - toX); if (d < best){ best = d; to = i; } });
-      const next = [...scenes].sort((a,b)=>a.order-b.order);
-      const [moved] = next.splice(from,1);
-      next.splice(to,0,moved);
-      const reindexed = next.map((s, i) => ({ ...s, order: i }));
-      onReorder(reindexed);
-      setDragIdx(null); setOffsetX(0);
+    const onPointerDown = (e: PointerEvent) => {
+      const rect = overlay.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const id = hitTest(x, y);
+      if (!id) return;
+      e.preventDefault();
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+
+      // compute grab offset inside the box (so we don't jump)
+      const idx = sorted.findIndex((s) => s.id === id);
+      const bx = colX(idx);
+      setGrabOffsetX(x - bx);
+      setDragId(id);
+      setGhostX(bx); // start at current position
     };
 
-    canvas.addEventListener('mousedown', onDown);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragId) return;
+      const rect = overlay.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+
+      // position follows cursor without cumulative deltas
+      const newX = x - grabOffsetX;
+      setGhostX(newX);
+
+      // live reordering preview (snap to nearest index)
+      const targetIdx = idxFromX(newX + BOX_W / 2);
+      const currIdx = sorted.findIndex((s) => s.id === dragId);
+      if (targetIdx !== currIdx) {
+        const next = sorted.slice();
+        const [moved] = next.splice(currIdx, 1);
+        next.splice(targetIdx, 0, moved);
+        // write back orders but do not commit to props directly; call onReorder
+        onReorder(next.map((s, i) => ({ ...s, order: i })));
+      }
+    };
+
+    const endDrag = (e: PointerEvent) => {
+      if (!dragId) return;
+      (e.target as Element).releasePointerCapture?.(e.pointerId);
+      setDragId(null);
+      setGhostX(null);
+    };
+
+    overlay.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", endDrag);
+    window.addEventListener("pointercancel", endDrag);
     return () => {
-      canvas.removeEventListener('mousedown', onDown);
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      overlay.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", endDrag);
+      window.removeEventListener("pointercancel", endDrag);
     };
-  }, [dragIdx, offsetX, positioned, scenes, onReorder]);
+  }, [sorted, dragId, grabOffsetX, onReorder]);
 
   return (
-    <Card className="rounded-2xl">
-      <CardHeader>
-        <CardTitle className="text-lg">Paradigm Timeline</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-sm opacity-70 mb-2">Drag boxes left/right to reorder scenes. Changes are saved automatically.</div>
-        <canvas ref={canvasRef} className="w-full rounded-xl shadow-sm border" />
-      </CardContent>
-    </Card>
+    <div className="relative w-full">
+      <canvas ref={canvasRef} className="w-full block rounded-2xl border" />
+      <div ref={overlayRef} className="absolute inset-0" />
+    </div>
   );
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
-  const r = Math.min(radius, width/2, height/2);
+// ---------- helpers ----------
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  const radius = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + width - r, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
-  ctx.lineTo(x + width, y + height - r);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-  ctx.lineTo(x + r, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
   ctx.closePath();
+}
+
+function truncate(s: string, n: number) {
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+// draw a small badge with an emoji icon for INT/EXT
+function drawLocationBadge(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  loc: SlugLocation //"INT" | "EXT"
+) {
+  const badgeW = 32;
+  const badgeH = 32;
+  const pad = 8;
+  const bx = x + BOX_W - badgeW - pad; // top-right inside the card
+  const by = y + pad;
+
+  // background
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  ctx.strokeStyle = "rgba(0,0,0,0.1)";
+  roundRect(ctx, bx, by, badgeW, badgeH, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  // icon
+  const icon = loc === "EXT" ? "🌲" : "🏠";
+  ctx.font = "16px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
+  ctx.textBaseline = "middle";
+  ctx.fillText(icon, bx + 6, by + badgeH / 2);
+}
+
+// draw a small badge with an emoji icon for DAY/NIGHT
+function drawTimeOfDayBadge(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  tod: SlugTimeOfDay
+) {
+  const badgeW = 32;
+  const badgeH = 32;
+  const pad = 8;
+  const bx = x + BOX_W - badgeW - pad; // top-right inside the card
+  const by = y + BOX_H - badgeH - pad;
+
+  // background
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  ctx.strokeStyle = "rgba(0,0,0,0.1)";
+  roundRect(ctx, bx, by, badgeW, badgeH, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  // icon
+  const icon = tod === "DAY" ? "🌞" : "🌙";
+  ctx.font = "16px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
+  ctx.textBaseline = "middle";
+  ctx.fillText(icon, bx + 6, by + badgeH / 2);
 }

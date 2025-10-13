@@ -1,8 +1,8 @@
 // src/lib/types.ts
-// ------------------------------------------------------------
 export type ID = string;
-
 export type GroupingMode = "none" | "episodes" | "seasons" | "seasons-episodes"; // seasons-episodes => scenes can belong to season and episode (episode references a season)
+export type SlugLocation = "INT" | "EXT"; // Scene slug line location
+export type SlugTimeOfDay = "DAY" | "NIGHT"; // Scene slug line time of day
 
 export type Project = {
   id: ID;
@@ -19,6 +19,7 @@ export type Season = {
   order: number;
   createdAt: string;
   updatedAt: string;
+  hidden?: boolean;
 };
 
 export type Episode = {
@@ -29,6 +30,7 @@ export type Episode = {
   order: number;
   createdAt: string;
   updatedAt: string;
+  hidden?: boolean;
 };
 
 export type SceneVersion = { 
@@ -40,7 +42,9 @@ export type SceneVersion = {
 export type Scene = {
   id: ID;
   projectId: ID; // 🔗 belongs to a project
+  loc?: SlugLocation; // INT/EXT
   title: string;
+  tod?: SlugTimeOfDay; // DAY/NIGHT
   content: string;
   versions: SceneVersion[];
   color: string;
@@ -52,9 +56,32 @@ export type Scene = {
   updatedAt: string;
 };
 
+export type Note = {
+  id: ID;
+  projectId: ID; // 🔗 belongs to a project
+  title: string;
+  content: string;
+  order: number;
+  topicId?: ID | null; // optional categorization
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Topic = {
+  id: ID;
+  projectId: ID;
+  title: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  hidden?: boolean;
+};
+
 export type ProjectBundle = {
   project: Project;
   seasons: Season[];
   episodes: Episode[];
   scenes: Scene[];
+  notes: Note[];
+  topics: Topic[];
 };

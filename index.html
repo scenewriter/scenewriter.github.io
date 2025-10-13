@@ -11,9 +11,37 @@
         <div class="container" style="text-align: center;">
             <h1>Paradigm SceneWriter</h1>
             <h4>JKG</h4>
-        </div>
+            <button id="btnTest">Test</button>
+        </div> 
         <div class="foot">
             <span>&copy; 2025 jkg-Paradigm SceneWriter</span>
         </div>
     </body>
 </html>
+<script>
+    async function getAvailableStorage() {
+        if ("storage" in navigator && "estimate" in navigator.storage) {
+            try {
+                const { usage, quota } = await navigator.storage.estimate();
+                const availableSpaceInBytes = quota - usage;
+                const availableSpaceInMB = availableSpaceInBytes / (1024 * 1024);
+
+                console.log(`Current storage usage: ${usage} bytes`);
+                console.log(`Total storage quota: ${quota} bytes`);
+                console.log(`Available storage space: ${availableSpaceInBytes} bytes (${availableSpaceInMB.toFixed(2)} MB)`);
+
+                return { usage, quota, availableSpaceInBytes, availableSpaceInMB };
+            } catch (error) {
+                console.error("Error estimating storage:", error);
+                return null;
+            }
+        } else {
+            console.warn("StorageManager API not supported in this browser.");
+            return null;
+        }
+    }
+
+    const btnTest = document.getElementById('btnTest');
+    btnTest && btnTest.addEventListener('click', getAvailableStorage);
+    // Call the function to get the available storage //getAvailableStorage();
+</script>
