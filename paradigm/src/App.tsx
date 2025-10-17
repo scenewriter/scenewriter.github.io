@@ -1,5 +1,5 @@
-// src/App.tsx 
-import React, { useEffect, useMemo, useState } from 'react';
+// src/App.tsx // React, 
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -398,7 +398,7 @@ export default function App() {
           currentId={currentProjectId}
           seasons={seasons}
           episodes={episodes}
-          onToggle={() => setShowProjectPanel((v) => !v)}
+          //onToggle={() => setShowProjectPanel((v) => !v)}
           onSelect={handleSelectProject}
           onCreate={handleCreateProject}
           onRename={handleRenameProject}

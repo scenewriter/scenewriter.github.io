@@ -1,5 +1,5 @@
-// src/components/CanvasTimeline.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/components/CanvasTimeline.tsx // React, 
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Scene, SlugLocation, SlugTimeOfDay } from "@/lib/types";
 
 type Props = {

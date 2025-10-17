@@ -136,7 +136,12 @@ export function ParadigmBoard({
               <CanvasTimeline
                 scenes={scenes.filter((s) => s.episodeId === ep.id)}
                 onReorder={(nextSubset) =>
-                  mergeSubsetOrder(scenes, nextSubset, (s) => s.episodeId === ep.id, onReorderScenes)
+                  mergeSubsetOrder(
+                    scenes, 
+                    nextSubset, 
+                    //(s) => s.episodeId === ep.id, 
+                    onReorderScenes
+                  )
                 }
               />
             </Section>
@@ -223,7 +228,7 @@ export function ParadigmBoard({
                         mergeSubsetOrder(
                           scenes,
                           nextSubset,
-                          (sc) => sc.episodeId === ep.id,
+                          //(sc) => sc.episodeId === ep.id,
                           onReorderScenes
                         )
                       }
@@ -243,7 +248,7 @@ export function ParadigmBoard({
 function mergeSubsetOrder(
   all: Scene[],
   subsetNext: Scene[],
-  inSubset: (s: Scene) => boolean,
+  //inSubset: (s: Scene) => boolean,
   commit: (nextAll: Scene[]) => void
 ) {
   const subsetIds = new Set(subsetNext.map((s) => s.id));
@@ -252,6 +257,7 @@ function mergeSubsetOrder(
     .slice()
     .sort((a, b) => a.order - b.order)
     .map((s, i) => ({ ...s, order: i }));
+    
   commit(resorted);
 }
 

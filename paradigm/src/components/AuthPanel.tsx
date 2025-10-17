@@ -1,6 +1,5 @@
-// src/components/AuthPanel.tsx
-// ------------------------------------------------------------
-import React, { useEffect, useState } from 'react';
+// src/components/AuthPanel.tsx // React, 
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

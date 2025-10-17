@@ -15,7 +15,7 @@ export function ProjectPanel({
   currentId,
   seasons,
   episodes,
-  onToggle,
+  //onToggle,
   onSelect,
   onCreate,
   onRename,
@@ -31,7 +31,7 @@ export function ProjectPanel({
   currentId: string | null;
   seasons: Season[];
   episodes: Episode[];
-  onToggle: () => void;
+  //onToggle: () => void;
   onSelect: (id: string) => void;
   onCreate: (p: Project) => void;
   onRename: (id: string, name: string) => void;

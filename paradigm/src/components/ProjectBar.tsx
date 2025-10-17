@@ -1,6 +1,5 @@
-// src/components/ProjectBar.tsx (switch/create projects + grouping mode)
-// ------------------------------------------------------------
-import React, { useMemo, useState } from 'react';
+// src/components/ProjectBar.tsx // React, 
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
