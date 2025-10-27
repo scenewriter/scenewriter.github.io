@@ -3,6 +3,7 @@ import React from "react";
 import type { Episode, GroupingMode, Scene, Season } from "@/lib/types";
 import { CanvasTimeline } from "./CanvasTimeline";
 import { Button } from "@/components/ui/button";
+import { createScriptDocx } from "@/lib/exportDocx";
 import { ChevronDown, Eye, EyeOff, FileText } from "lucide-react";
 
 type Props = {
@@ -29,50 +30,50 @@ export function ParadigmBoard({
   onToggleEpisodeHidden,
 }: Props) {
   // --- Script generator for a specific subset (per timeline) ---
-  const createScript = ({
-    season,
-    episode,
-    subset,
-  }: {
-    season?: Season | null;
-    episode?: Episode | null;
-    subset: Scene[];
-  }) => {
-    const date = new Date();
-    const dateStr = date.toISOString().slice(0, 10);
-    const who = userName || "Unknown User";
+  // const createScript = ({
+  //   season,
+  //   episode,
+  //   subset,
+  // }: {
+  //   season?: Season | null;
+  //   episode?: Episode | null;
+  //   subset: Scene[];
+  // }) => {
+  //   const date = new Date();
+  //   const dateStr = date.toISOString().slice(0, 10);
+  //   const who = userName || "Unknown User";
 
-    const header: string[] = [
-      `PROJECT: ${projectTitle || "(untitled project)"}`,
-      ...(season ? [`SEASON: ${season.title || `(Season ${season.order + 1})`}`] : []),
-      ...(episode ? [`EPISODE: ${episode.title || `(Episode ${episode.order + 1})`}`] : []),
-      `CREATED BY: ${who}`,
-      `DATE: ${dateStr}`,
-      ``,
-      `----------------------------------------`,
-      ``,
-    ];
+  //   const header: string[] = [
+  //     `PROJECT: ${projectTitle || "(untitled project)"}`,
+  //     ...(season ? [`SEASON: ${season.title || `(Season ${season.order + 1})`}`] : []),
+  //     ...(episode ? [`EPISODE: ${episode.title || `(Episode ${episode.order + 1})`}`] : []),
+  //     `CREATED BY: ${who}`,
+  //     `DATE: ${dateStr}`,
+  //     ``,
+  //     `----------------------------------------`,
+  //     ``,
+  //   ];
 
-    const lines: string[] = [];
-    const slug = (s: Scene) => `${(s.loc ?? "INT").toUpperCase()} - ${s.title || "Untitled"} - ${(s.tod ?? "DAY").toUpperCase()}`;
+  //   const lines: string[] = [];
+  //   const slug = (s: Scene) => `${(s.loc ?? "INT").toUpperCase()} - ${s.title || "Untitled"} - ${(s.tod ?? "DAY").toUpperCase()}`;
 
-    const ordered = subset.slice().sort((a, b) => a.order - b.order);
-    for (const s of ordered) {
-      lines.push(slug(s));
-      lines.push((s.content ?? "").trim());
-      lines.push("");
-    }
+  //   const ordered = subset.slice().sort((a, b) => a.order - b.order);
+  //   for (const s of ordered) {
+  //     lines.push(slug(s));
+  //     lines.push((s.content ?? "").trim());
+  //     lines.push("");
+  //   }
 
-    const text = [...header, ...lines].join("\n").trim() + "\n";
-    const fnParts = [
-      projectTitle?.replace(/\s+/g, "_") || "project",
-      season ? `S${String(season.order + 1).padStart(2, "0")}` : null,
-      episode ? `E${String(episode.order + 1).padStart(2, "0")}` : null,
-      dateStr,
-    ].filter(Boolean);
-    const filename = `script_${fnParts.join("_")}.txt`;
-    downloadText(filename, text);
-  };
+  //   const text = [...header, ...lines].join("\n").trim() + "\n";
+  //   const fnParts = [
+  //     projectTitle?.replace(/\s+/g, "_") || "project",
+  //     season ? `S${String(season.order + 1).padStart(2, "0")}` : null,
+  //     episode ? `E${String(episode.order + 1).padStart(2, "0")}` : null,
+  //     dateStr,
+  //   ].filter(Boolean);
+  //   const filename = `script_${fnParts.join("_")}.txt`;
+  //   downloadText(filename, text);
+  // };
 
   if (mode === "none") {
     return (
@@ -82,7 +83,25 @@ export function ParadigmBoard({
           <div className="flex items-center gap-2">
             <Button
               className="rounded-xl inline-flex items-center gap-2"
-              onClick={() => createScript({ subset: scenes })}
+              onClick={() => 
+                createScriptDocx({
+                  projectTitle,
+                  userName,
+                  //season: s ? { title: s.title, order: s.order } : null,
+                  //episode: ep ? { title: ep.title, order: ep.order } : null,
+                  scenes: scenes
+                    //.filter((sc) => !sc.episodeId) //(ep ? sc.episodeId === ep.id : true))?
+                    .map((sc) => ({
+                      id: sc.id,
+                      title: sc.title,
+                      content: sc.content,
+                      loc: (sc.loc as any) ?? "INT",
+                      tod: (sc.tod as any) ?? "DAY",
+                      order: sc.order,
+                    })),
+                })
+                //createScript({ subset: scenes })
+              }
             >
               <FileText className="h-4 w-4" />
               Create Script
@@ -103,7 +122,7 @@ export function ParadigmBoard({
           ep.hidden ? (
             <CollapsedHeader
               key={ep.id}
-              title={`Episode ${ep.order + 1}: ${ep.title || "(untitled)"}`}
+              title={`#${ep.order + 1}: ${ep.title || "(untitled)"}`}
               hidden
               onToggle={() => onToggleEpisodeHidden(ep.id, false)}
             />
@@ -116,10 +135,25 @@ export function ParadigmBoard({
                   <Button
                     className="rounded-xl inline-flex items-center gap-2"
                     onClick={() =>
-                      createScript({
-                        episode: ep,
-                        subset: scenes.filter((s) => s.episodeId === ep.id),
+                      createScriptDocx({
+                        projectTitle,
+                        userName,
+                        episode: ep ? { title: ep.title, order: ep.order } : null,
+                        scenes: scenes
+                          .filter((sc) => (ep ? sc.episodeId === ep.id : true))
+                          .map((sc) => ({
+                            id: sc.id,
+                            title: sc.title,
+                            content: sc.content,
+                            loc: (sc.loc as any) ?? "INT",
+                            tod: (sc.tod as any) ?? "DAY",
+                            order: sc.order,
+                          })),
                       })
+                      // createScript({
+                      //   episode: ep,
+                      //   subset: scenes.filter((s) => s.episodeId === ep.id),
+                      // })
                     }
                   >
                     <FileText className="h-4 w-4" />
@@ -190,7 +224,7 @@ export function ParadigmBoard({
                   <CollapsedHeader
                     key={ep.id}
                     level={2}
-                    title={`Episode ${ep.order + 1}: ${ep.title || "(untitled)"}`}
+                    title={`#${ep.order + 1}: ${ep.title || "(untitled)"}`}
                     hidden
                     onToggle={() => onToggleEpisodeHidden(ep.id, false)}
                   />
@@ -198,17 +232,33 @@ export function ParadigmBoard({
                   <Section
                     key={ep.id}
                     level={2}
-                    title={`Episode ${ep.order + 1}: ${ep.title || "(untitled)"}`}
+                    title={`#${ep.order + 1}: ${ep.title || "(untitled)"}`}
                     actions={
                       <div className="flex items-center gap-2">
                         <Button
                           className="rounded-xl inline-flex items-center gap-2"
                           onClick={() =>
-                            createScript({
-                              season: s,
-                              episode: ep,
-                              subset: scenes.filter((sc) => sc.episodeId === ep.id),
+                            createScriptDocx({
+                              projectTitle,
+                              userName,
+                              season: s ? { title: s.title, order: s.order } : null,
+                              episode: ep ? { title: ep.title, order: ep.order } : null,
+                              scenes: scenes
+                                .filter((sc) => (ep ? sc.episodeId === ep.id : true))
+                                .map((sc) => ({
+                                  id: sc.id,
+                                  title: sc.title,
+                                  content: sc.content,
+                                  loc: (sc.loc as any) ?? "INT",
+                                  tod: (sc.tod as any) ?? "DAY",
+                                  order: sc.order,
+                                })),
                             })
+                            // createScript({
+                            //   season: s,
+                            //   episode: ep,
+                            //   subset: scenes.filter((sc) => sc.episodeId === ep.id),
+                            // })
                           }
                         >
                           <FileText className="h-4 w-4" />
@@ -332,12 +382,12 @@ function HideToggle({
   );
 }
 
-function downloadText(filename: string, text: string) {
-  const blob = new Blob([text], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+// function downloadText(filename: string, text: string) {
+//   const blob = new Blob([text], { type: "text/plain" });
+//   const url = URL.createObjectURL(blob);
+//   const a = document.createElement("a");
+//   a.href = url;
+//   a.download = filename;
+//   a.click();
+//   URL.revokeObjectURL(url);
+// }

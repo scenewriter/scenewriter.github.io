@@ -1,6 +1,6 @@
-// src/components/CanvasTimeline.tsx // React, 
+// src/components/CanvasTimeline.tsx // React,, SlugLocation, SlugTimeOfDay 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Scene, SlugLocation, SlugTimeOfDay } from "@/lib/types";
+import type { Scene } from "@/lib/types";
 
 type Props = {
   scenes: Scene[];
@@ -87,9 +87,9 @@ export function CanvasTimeline({ scenes, onReorder }: Props) {
         ctx.fillText(meta, x + 12, y + BOX_H - 24);
 
         // location icon badge
-        drawLocationBadge(ctx, x, y, s.loc ?? "INT");
+        //drawLocationBadge(ctx, x, y, s.loc ?? "INT");
         // time of day icon badge
-        drawTimeOfDayBadge(ctx, x, y, s.tod ?? "DAY");
+        //drawTimeOfDayBadge(ctx, x, y, s.tod ?? "DAY");
       }
     };
 
@@ -202,58 +202,58 @@ function roundRect(
 function truncate(s: string, n: number) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
-// draw a small badge with an emoji icon for INT/EXT
-function drawLocationBadge(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  loc: SlugLocation //"INT" | "EXT"
-) {
-  const badgeW = 32;
-  const badgeH = 32;
-  const pad = 8;
-  const bx = x + BOX_W - badgeW - pad; // top-right inside the card
-  const by = y + pad;
+// // draw a small badge with an emoji icon for INT/EXT
+// function drawLocationBadge(
+//   ctx: CanvasRenderingContext2D,
+//   x: number,
+//   y: number,
+//   loc: SlugLocation //"INT" | "EXT"
+// ) {
+//   const badgeW = 32;
+//   const badgeH = 32;
+//   const pad = 8;
+//   const bx = x + BOX_W - badgeW - pad; // top-right inside the card
+//   const by = y + pad;
 
-  // background
-  ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.strokeStyle = "rgba(0,0,0,0.1)";
-  roundRect(ctx, bx, by, badgeW, badgeH, 4);
-  ctx.fill();
-  ctx.stroke();
+//   // background
+//   ctx.save();
+//   ctx.fillStyle = "rgba(255,255,255,0.95)";
+//   ctx.strokeStyle = "rgba(0,0,0,0.1)";
+//   roundRect(ctx, bx, by, badgeW, badgeH, 4);
+//   ctx.fill();
+//   ctx.stroke();
 
-  // icon
-  const icon = loc === "EXT" ? "🌲" : "🏠";
-  ctx.font = "16px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
-  ctx.textBaseline = "middle";
-  ctx.fillText(icon, bx + 6, by + badgeH / 2);
-}
+//   // icon
+//   const icon = loc === "EXT" ? "🌲" : "🏠";
+//   ctx.font = "16px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
+//   ctx.textBaseline = "middle";
+//   ctx.fillText(icon, bx + 6, by + badgeH / 2);
+// }
 
-// draw a small badge with an emoji icon for DAY/NIGHT
-function drawTimeOfDayBadge(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  tod: SlugTimeOfDay
-) {
-  const badgeW = 32;
-  const badgeH = 32;
-  const pad = 8;
-  const bx = x + BOX_W - badgeW - pad; // top-right inside the card
-  const by = y + BOX_H - badgeH - pad;
+// // draw a small badge with an emoji icon for DAY/NIGHT
+// function drawTimeOfDayBadge(
+//   ctx: CanvasRenderingContext2D,
+//   x: number,
+//   y: number,
+//   tod: SlugTimeOfDay
+// ) {
+//   const badgeW = 32;
+//   const badgeH = 32;
+//   const pad = 8;
+//   const bx = x + BOX_W - badgeW - pad; // top-right inside the card
+//   const by = y + BOX_H - badgeH - pad;
 
-  // background
-  ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.strokeStyle = "rgba(0,0,0,0.1)";
-  roundRect(ctx, bx, by, badgeW, badgeH, 4);
-  ctx.fill();
-  ctx.stroke();
+//   // background
+//   ctx.save();
+//   ctx.fillStyle = "rgba(255,255,255,0.95)";
+//   ctx.strokeStyle = "rgba(0,0,0,0.1)";
+//   roundRect(ctx, bx, by, badgeW, badgeH, 4);
+//   ctx.fill();
+//   ctx.stroke();
 
-  // icon
-  const icon = tod === "DAY" ? "🌞" : "🌙";
-  ctx.font = "16px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
-  ctx.textBaseline = "middle";
-  ctx.fillText(icon, bx + 6, by + badgeH / 2);
-}
+//   // icon
+//   const icon = tod === "DAY" ? "🌞" : "🌙";
+//   ctx.font = "16px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
+//   ctx.textBaseline = "middle";
+//   ctx.fillText(icon, bx + 6, by + badgeH / 2);
+// }
